@@ -1,0 +1,212 @@
+<?php
+/**
+ * @file
+ * A module that displays data from the RiMDB database.
+ */
+
+/**
+ * Implements hook_help
+ * 
+ * Displays help info
+ * 
+ * @param $path
+ * The path of the site that we're using to display help
+ * @param $arg
+ * Array that holds the current path as returned from the arg() function
+ */
+function rimdb_help($path, $arg) {
+	switch ($path) {
+		case "admin/help#rimdb":
+			return '<p>'.  t("Display system for the RiMDB Database") .'</p>';
+			break;
+	}
+}
+
+/**
+ * Implements hook_block_info
+ * 
+ * @return multitype:string NULL
+ */
+function rimdb_block_info() {
+	$blocks['rimdb'] = array(
+			'info' => t('RiMDB Block'), //The name that will appear in the block list.
+			'cache' => DRUPAL_CACHE_PER_PAGE, //Changes depending on the current page
+	);
+	return $blocks;
+}
+
+/**
+ * Custom content function.
+ *
+ * Set beginning and end dates, retrieve posts from database
+ * saved in that time period.
+ *
+ * @return
+ *   A result set of the targeted posts.
+ */
+function rimdb_block_contents($display){
+	//Get today's date.
+	$today = getdate();
+	//Calculate the date a week ago.
+	$start_time = mktime(0, 0, 0,$today['mon'],($today['mday'] - 7), $today['year']);
+	//Get all posts from one week ago to the present.
+	$end_time = time();
+	
+	$max_num = variable_get('rimdb_posts_max', 3);
+	
+	//Use Database API to retrieve current posts.
+	$query = db_select('node', 'n')
+	->fields('n', array('nid', 'title', 'created'))
+	->condition('status', 1) //Published.
+	->condition('created', array($start_time, $end_time), 'BETWEEN')
+	->orderBy('created', 'DESC'); //Most recent first.
+  
+  if($display == 'block') {
+    // Restrict the range if called with 'block' argument.
+  	$query->range(0, $max_num);
+  }
+  
+	$query->execute();
+	return $query;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Prepares the contents of the block.
+ */
+function rimdb_block_view($delta = '') {
+	switch($delta){
+		case 'rimdb':
+			$block['subject'] = t('RiMDB Block');
+			if(user_access('access content')){
+				//Use our custom function to retrieve data.
+				$result = rimdb_block_contents('block');
+				//Array to contain items for the block to render.
+				$items = array();
+				//Iterate over the resultset and format as links.
+				foreach ($result as $node){
+					$items[] = array(
+							'data' => l($node->title, 'node/' . $node->nid),
+					);
+				}
+
+				if (empty($items)) { //No content in the last week.
+					$block['content'] = t('No posts available.');
+				}
+				else {
+					//Pass data through theme function.
+					$block['content'] = theme('item_list', array(
+							'items' => $items));
+				}
+			}
+	}
+	return $block;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function rimdb_menu() {
+	$items = array();
+
+	$items['admin/config/content/rimdb'] = array(
+			'title' => 'RiMDB Config',
+			'description' => 'Configuration for RiMDB module',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('rimdb_form'),
+			'access arguments' => array('access administration pages'),
+			'type' => MENU_NORMAL_ITEM,
+	);
+	
+	$items['rimdbposts'] = array(
+			'title' => 'RiMDB posts',
+			'page callback' => '_rimdb_posts_page',
+			'access arguments' => array('access rimdb content'),
+			'type' => MENU_NORMAL_ITEM, //Will appear in Navigation menu.
+	);
+
+	return $items;
+}
+
+/**
+ * Form function, called by drupal_get_form()
+ * in rimdb_menu().
+ */
+function rimdb_form($form, &$form_state) {
+	$form['rimdb_posts_max'] = array(
+			'#type' => 'textfield',
+			'#title' => t('Maximum number of posts'),
+			'#default_value' => variable_get('rimdb_posts_max', 3),
+			'#size' => 2,
+			'#maxlength' => 2,
+			'#description' => t('The maximum number of links to display in the block.'),
+			'#required' => TRUE,
+	);
+
+	return system_settings_form($form);
+}
+
+/**
+ * Implements validation from the Form API.
+ *
+ * @param $form
+ *   A structured array containing the elements and properties of the form.
+ * @param $form_state
+ *   An array that stores information about the form's current state
+ *   during processing. See drupal_build_form() for a list of $form_state keys.
+ */
+function rimdb_form_validate($form, &$form_state){
+	$max_num = $form_state['values']['rimdb_posts_max'];
+	if (!is_numeric($max_num)){
+		form_set_error('rimdb_posts_max', t('You must enter an integer for the maximum number of posts to display.'));
+	}
+	else if ($max_num <= 0){
+		form_set_error('rimdb_posts_max', t('Maximum number of posts to display must be positive.'));
+	}
+}
+
+/**
+ * Implements hook_permission().
+ */
+function rimdb_permission(){
+	return array(
+			'access rimdb content' => array(
+					'title' => t('Access content for the RiMDB module'),
+			)
+	);
+}
+
+/**
+ * Custom page callback function, declared in current_posts_menu().
+ */
+function _rimdb_posts_page() {
+	$result = rimdb_block_contents('page');
+	//Array to contain items for the page to render.
+	$items = array();
+	//Iterate over the resultset and format as links.
+	foreach ($result as $node) {
+		$items[] = array(
+				'data' => l($node->title, 'node/' . $node->nid),
+		);
+	}
+	
+	if (empty($items)) { //No content in the last week.
+		$page_array['rimdbposts_arguments'] = array(
+		//Title serves as page subtitle
+				'#title' => t('All posts from the last week'),
+				'#markup' => t('No posts available.'),
+		);
+		return $page_array;
+	}
+	else {
+		$page_array['rimdbposts_arguments'] = array(
+				'#title' => t('All posts from the last week'),
+				'#items' => $items,
+				//Theme hook with suggestion.
+				'#theme' => 'item_list__rimdb',
+		);
+		return $page_array;
+	}
+}
+
