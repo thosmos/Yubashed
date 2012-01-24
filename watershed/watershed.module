@@ -14,10 +14,10 @@
  * @param $arg
  * Array that holds the current path as returned from the arg() function
  */
-function rimdb_help($path, $arg) {
+function watershed_help($path, $arg) {
 	switch ($path) {
 		case "admin/help#rimdb":
-			return '<p>'.  t("Display system for the RiMDB Database") .'</p>';
+			return '<p>'.  t("Watershed info display system") .'</p>';
 			break;
 	}
 }
@@ -27,9 +27,9 @@ function rimdb_help($path, $arg) {
  * 
  * @return multitype:string NULL
  */
-function rimdb_block_info() {
-	$blocks['rimdb'] = array(
-			'info' => t('RiMDB Block'), //The name that will appear in the block list.
+function watershed_block_info() {
+	$blocks['watershed'] = array(
+			'info' => t('Watershed Block'), //The name that will appear in the block list.
 			'cache' => DRUPAL_CACHE_PER_PAGE, //Changes depending on the current page
 	);
 	return $blocks;
@@ -44,7 +44,7 @@ function rimdb_block_info() {
  * @return
  *   A result set of the targeted posts.
  */
-function rimdb_block_contents($display){
+function watershed_block_contents($display){
 	//Get today's date.
 	$today = getdate();
 	//Calculate the date a week ago.
@@ -52,7 +52,7 @@ function rimdb_block_contents($display){
 	//Get all posts from one week ago to the present.
 	$end_time = time();
 	
-	$max_num = variable_get('rimdb_posts_max', 3);
+	$max_num = variable_get('watershed_posts_max', 3);
 	
 	//Use Database API to retrieve current posts.
 	$query = db_select('node', 'n')
@@ -74,14 +74,14 @@ function rimdb_block_contents($display){
  *
  * Prepares the contents of the block.
  */
-function rimdb_block_view($delta = '') {
+function watershed_block_view($delta = '') {
 	switch($delta){
-		case 'rimdb':
-			$block['subject'] = t('RiMDB Block');
+		case 'watershed':
+			$block['subject'] = t('Watershed Block');
 			
 			if(user_access('access content')){
 				//Use our custom function to retrieve data.
-				$result = rimdb_block_contents('block');
+				$result = watershed_block_contents('block');
 				//Array to contain items for the block to render.
 				$items = array();
 				//Iterate over the resultset and format as links.
@@ -102,13 +102,13 @@ function rimdb_block_view($delta = '') {
 				else {
 					//Pass data through theme function.
 					$block['content']['posts'] = array(
-				    '#theme' => 'item_list__rimdb_posts__block',
+				    '#theme' => 'item_list__watershed_posts__block',
 				    '#items' => $items,
 					);
 					//Add a link to the page for more entries.
 					$block['content']['more'] = array(
-					    '#theme' => 'more_link__rimdb_posts',
-					    '#url' => 'rimdb_posts',
+					    '#theme' => 'more_link__watershed_posts',
+					    '#url' => 'watershed_posts',
 					    '#title' => t('See the full list of rimdb posts.'),
 					);
 				}
@@ -124,19 +124,19 @@ function rimdb_block_view($delta = '') {
 function rimdb_menu() {
 	$items = array();
 
-	$items['admin/config/content/rimdb'] = array(
-			'title' => 'RiMDB Config',
-			'description' => 'Configuration for RiMDB module',
+	$items['admin/config/content/watershed'] = array(
+			'title' => 'Watershed Info Config',
+			'description' => 'Configuration for the Watershed Info module',
 			'page callback' => 'drupal_get_form',
-			'page arguments' => array('rimdb_form'),
+			'page arguments' => array('watershed_form'),
 			'access arguments' => array('access administration pages'),
 			'type' => MENU_NORMAL_ITEM,
 	);
 	
-	$items['rimdb_posts'] = array(
-			'title' => 'RiMDB posts',
-			'page callback' => '_rimdb_posts_page',
-			'access arguments' => array('access rimdb content'),
+	$items['watershed_posts'] = array(
+			'title' => 'Watershed posts',
+			'page callback' => '_watershed_posts_page',
+			'access arguments' => array('access watershed content'),
 			//'type' => MENU_NORMAL_ITEM, //Will appear in Navigation menu.
 			'type' => MENU_CALLBACK, // will not appear in Nav menu, but has a path and attributes
 	);
@@ -148,11 +148,11 @@ function rimdb_menu() {
  * Form function, called by drupal_get_form()
  * in rimdb_menu().
  */
-function rimdb_form($form, &$form_state) {
-	$form['rimdb_posts_max'] = array(
+function watershed_form($form, &$form_state) {
+	$form['watershed_posts_max'] = array(
 			'#type' => 'textfield',
 			'#title' => t('Maximum number of posts'),
-			'#default_value' => variable_get('rimdb_posts_max', 3),
+			'#default_value' => variable_get('watershed_posts_max', 3),
 			'#size' => 2,
 			'#maxlength' => 2,
 			'#description' => t('The maximum number of links to display in the block.'),
@@ -171,23 +171,23 @@ function rimdb_form($form, &$form_state) {
  *   An array that stores information about the form's current state
  *   during processing. See drupal_build_form() for a list of $form_state keys.
  */
-function rimdb_form_validate($form, &$form_state){
-	$max_num = $form_state['values']['rimdb_posts_max'];
+function watershed_form_validate($form, &$form_state){
+	$max_num = $form_state['values']['watershed_posts_max'];
 	if (!is_numeric($max_num)){
-		form_set_error('rimdb_posts_max', t('You must enter an integer for the maximum number of posts to display.'));
+		form_set_error('watershed_posts_max', t('You must enter an integer for the maximum number of posts to display.'));
 	}
 	else if ($max_num <= 0){
-		form_set_error('rimdb_posts_max', t('Maximum number of posts to display must be positive.'));
+		form_set_error('watershed_posts_max', t('Maximum number of posts to display must be positive.'));
 	}
 }
 
 /**
  * Implements hook_permission().
  */
-function rimdb_permission(){
+function watershed_permission(){
 	return array(
-			'access rimdb content' => array(
-					'title' => t('Access content for the Rimdb module'),
+			'access watershed content' => array(
+					'title' => t('Access content for the Watershed module'),
 			)
 	);
 }
@@ -195,8 +195,8 @@ function rimdb_permission(){
 /**
  * Custom page callback function, declared in rimdb_menu().
  */
-function _rimdb_posts_page() {
-	$result = rimdb_block_contents('page');
+function _watershed_posts_page() {
+	$result = watershed_block_contents('page');
 	//Array to contain items for the page to render.
 	$items = array();
 	//Iterate over the resultset and format as links.
@@ -207,7 +207,7 @@ function _rimdb_posts_page() {
 	}
 	
 	if (empty($items)) { //No content in the last week.
-		$page_array['rimdb_posts_arguments'] = array(
+		$page_array['watershed_posts_arguments'] = array(
 		//Title serves as page subtitle
 				'#title' => t('All posts from the last week'),
 				'#markup' => t('No posts available.'),
@@ -215,11 +215,11 @@ function _rimdb_posts_page() {
 		return $page_array;
 	}
 	else {
-		$page_array['rimdb_posts_arguments'] = array(
+		$page_array['watershed_posts_arguments'] = array(
 				'#title' => t('All posts from the last week'),
 				'#items' => $items,
 				//Theme hook with suggestion.
-				'#theme' => 'item_list__rimdb_posts',
+				'#theme' => 'item_list__watershed_posts',
 		);
 		return $page_array;
 	}

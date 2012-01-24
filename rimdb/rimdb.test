@@ -1,0 +1,61 @@
+<?php
+/**
+ * @file
+ * Tests for the Rimdb module
+ */
+
+class RimdbTestCase extends DrupalWebTestCase{
+  public static function getInfo(){
+    return array(
+      'name' => 'RiMDB module functionality',
+      'description' => 'Tests hooks in the Rimdb module',
+      'group' => 'RiMDB',
+    ); 
+  }
+  
+  public function setUp(){
+  	parent::setUp('rimdb');
+  }
+  
+  public function testPermission(){
+  	$data = module_invoke('rimdb', 'permission');
+  	$this->assertTrue(is_array($data), t('Permission hook returns array.'));
+  	
+  	$this->assertTrue(array_key_exists('access rimdb content', $data), t('Permission is as expected.'));
+	}
+	
+	public function testMenu(){
+		$items = module_invoke('rimdb', 'menu');
+	
+		$this->assertEqual(2, count($items), t('Two items in menu.'));
+	
+		$this->assertIdentical($items['admin/config/content/rimdb_posts']['title'],
+		$items['rimdb_posts']['title'], t('Titles are identical.'));
+	}
+	
+	public function testBlockView(){
+		$data = module_invoke('rimdb', 'block_view', 'rimdb');
+	
+		$this->assertEqual(t('RiMDB Block'), $data['subject'], t('Subject is as expected.'));
+	
+		$this->assertNotNull($data['content'], t('Block contains data.'));
+	}
+	
+	public function testBlockInfo(){
+		$info = module_invoke('rimdb', 'block_info');
+	
+		$this->assertNotEqual('DRUPAL_CACHE_PER_USER', $info['rimdb']['cache'], t('Cache is not set to DRUPAL_CACHE_PER_USER'));
+		
+		$this->assertNotEqual('DRUPAL_CACHE_PER_ROLE', $info['rimdb']['cache'], t('Cache is not set to DRUPAL_CACHE_PER_ROLE'));
+		
+		$this->assertFalse(count($info) > 1, t('No more than one block defined.'));
+	}
+	
+	public function testBlock(){
+		$info = module_invoke('rimdb', 'block_info');
+		$data = module_invoke('rimdb', 'block_view', 'rimdb');
+	
+		$this->assertIdentical($info['rimdb']['info'], $data['subject'], t('Block list
+	    name and subject are identical.'));
+	}
+}

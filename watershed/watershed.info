@@ -1,0 +1,4 @@
+name = Watershed Infosystem
+description = Enables features for viewing and navigating watershed information
+core = 7.x
+package = zzz
